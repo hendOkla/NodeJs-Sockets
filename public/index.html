@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Socket.IO chat</title>
+    <link rel="stylesheet" href="style.css" />
+
+  </head>
+  <body>
+    <div id="chatStatus"></div>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+        <p id="typing_status"></p>
+      <input id="input" autocomplete="off" /><button>Send</button>
+    </form>
+
+    <!-- socket client library -->
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script>
+    const socket = io('http://localhost:3000');
+
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+    const typingStatus = document.getElementById('typing_status');
+
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (input.value) {
+        socket.emit('message', input.value);
+        input.value = '';
+        }
+    });
+
+    let mySocketId = '';
+
+    socket.on('connect', () => {
+    mySocketId = socket.id;
+    });
+
+
+const userColors = {}; 
+
+function generateColor(id) {
+
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = hash % 360;
+  return `hsl(${hue}, 70%, 85%)`; 
+}
+
+socket.on('send_messages_to_all_users', (data) => {
+  const item = document.createElement('li');
+  item.innerHTML = `<span class="sender-id">${data.senderId}</span><br/><span class="message-text">${data.text}</span>`;
+  
+  if (data.senderId === mySocketId) {
+    item.classList.add('message-left');
+  } else {
+    item.classList.add('message-right');
+  }
+
+  
+  if (!userColors[data.senderId]) {
+    userColors[data.senderId] = generateColor(data.senderId);
+  }
+
+  item.classList.add('message-custom');
+  item.style.backgroundColor = userColors[data.senderId];
+
+  messages.appendChild(item);
+  window.scrollTo(0, document.body.scrollHeight);
+});
+
+    input.addEventListener('keydown',()=>{
+        socket.emit('typing');
+    })
+    socket.on('show_typing_status', ()=>{
+        typingStatus.innerHTML='Client is typing...'
+    })
+    
+    input.addEventListener('keyup',()=>{
+        socket.emit('stop_typing');
+    })
+    
+    socket.on('clear_typing_status', ()=>{
+        setTimeout(()=>{
+            typingStatus.innerHTML=''
+        },1000)
+    })
+    socket.on('insert_chat', (data) => {
+        const statusBox = document.getElementById('chatStatus');
+        if (statusBox) {
+            statusBox.textContent = `${data.socketId} has inserted a chat`;
+            statusBox.classList.remove('chat-left');
+            statusBox.classList.add('chat-inserted');
+
+            setTimeout(() => {
+            statusBox.textContent = '';
+            statusBox.classList.remove('chat-inserted');
+            }, 5000);
+        }
+    });
+
+    socket.on('left_chat', (data) => {
+        const statusBox = document.getElementById('chatStatus');
+        if (statusBox) {
+            statusBox.textContent = `${data.socketId} Someone left the chat`;
+            statusBox.classList.remove('chat-inserted');
+            statusBox.classList.add('chat-left');
+
+            setTimeout(() => {
+            statusBox.textContent = '';
+            statusBox.classList.remove('chat-left');
+            }, 5000);
+        }
+    });
+    </script>
+  </body>
+</html>

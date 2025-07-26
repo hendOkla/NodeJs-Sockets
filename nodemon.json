@@ -1,0 +1,8 @@
+{
+    "watch": [
+        "public/**/*",
+        "index.js"
+    ],
+    "ext": "js,html",
+    "exec": "node index.js"
+}
